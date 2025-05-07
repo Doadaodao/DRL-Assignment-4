@@ -1,8 +1,3 @@
-# python3
-# Create Dat3: 2022-12-27
-# Func: PPO 输出action为连续变量
-# =====================================================================================================
-
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -13,8 +8,6 @@ import random
 from collections import deque
 from tqdm import tqdm
 import typing as typ
-
-
 
 class policyNet(nn.Module):
     """
@@ -38,7 +31,6 @@ class policyNet(nn.Module):
             x = layer['linear_action'](layer['linear'](x))
         
         mean_ = 2.0 * torch.tanh(self.fc_mu(x))
-        # np.log(1 + np.exp(2))
         std = F.softplus(self.fc_std(x))
         return mean_, std
 
@@ -73,9 +65,6 @@ def compute_advantage(gamma, lmbda, td_delta):
 
 
 class PPO:
-    """
-    PPO算法, 采用截断方式
-    """
     def __init__(self,
                 state_dim: int,
                 hidden_layers_dim: typ.List,
@@ -93,8 +82,8 @@ class PPO:
         
         self.gamma = gamma
         self.lmbda = PPO_kwargs['lmbda']
-        self.ppo_epochs = PPO_kwargs['ppo_epochs'] # 一条序列的数据用来训练的轮次
-        self.eps = PPO_kwargs['eps'] # PPO中截断范围的参数
+        self.ppo_epochs = PPO_kwargs['ppo_epochs']
+        self.eps = PPO_kwargs['eps']
         self.count = 0 
         self.device = device
     
@@ -112,7 +101,7 @@ class PPO:
         state = torch.FloatTensor(state).to(self.device)
         action = torch.tensor(action).view(-1, 1).to(self.device)
         reward = torch.tensor(reward).view(-1, 1).to(self.device)
-        reward = (reward + 8.0) / 8.0  # 和TRPO一样,对奖励进行修改,方便训练
+        reward = (reward + 8.0) / 8.0  # reward modification
         next_state = torch.FloatTensor(next_state).to(self.device)
         done = torch.FloatTensor(done).view(-1, 1).to(self.device)
         
@@ -122,7 +111,7 @@ class PPO:
                 
         mu, std = self.actor(state)
         action_dists = torch.distributions.Normal(mu.detach(), std.detach())
-        # 动作是正态分布
+
         old_log_probs = action_dists.log_prob(action)
         for _ in range(self.ppo_epochs):
             mu, std = self.actor(state)
@@ -145,9 +134,6 @@ class PPO:
             self.actor_opt.step()
             self.critic_opt.step()
 
-
-
-
 class replayBuffer:
     def __init__(self, capacity: int):
         self.buffer = deque(maxlen=capacity)
@@ -161,7 +147,6 @@ class replayBuffer:
     def sample(self, batch_size: int):
         return random.sample(self.buffer, batch_size)
         
-
 def play(env, env_agent, cfg, episode_count=2):
     for e in range(episode_count):
         s, _ = env.reset()
@@ -182,12 +167,6 @@ def play(env, env_agent, cfg, episode_count=2):
     env.close()
 
 
-
-
-
-
-
-
 class Config:
     num_episode = 1200
     state_dim = None
@@ -206,10 +185,9 @@ class Config:
     minimal_size = 1024
     batch_size = 128
     save_path = './PPO_Pendulum.pth'
-    # 回合停止控制
+
     max_episode_rewards = 260
     max_episode_steps = 260
-    
     
     def __init__(self, env):
         self.state_dim = env.observation_space.shape[0]
@@ -218,7 +196,6 @@ class Config:
         except Exception as e:
             self.action_dim = env.action_space.shape[0]
         print(f'device={self.device} | env={str(env)}')
-
 
 
 def train_agent(env, cfg):
@@ -264,26 +241,9 @@ def train_agent(env, cfg):
     env.close()
     return ac_agent
 
-
-
-
-
-
 if __name__ == '__main__':
-    print('=='*35)
     print('Training Pendulum-v1')
     env = gym.make('Pendulum-v1')
     cfg = Config(env)
     ac_agent = train_agent(env, cfg)
-    # ac_agent = PPO(
-    #     state_dim=cfg.state_dim,
-    #     hidden_layers_dim=cfg.hidden_layers_dim,
-    #     action_dim=cfg.action_dim,
-    #     actor_lr=cfg.actor_lr,
-    #     critic_lr=cfg.critic_lr,
-    #     gamma=cfg.gamma,
-    #     PPO_kwargs=cfg.PPO_kwargs,
-    #     device=cfg.device
-    # )
     ac_agent.actor.load_state_dict(torch.load(cfg.save_path))
-    play(gym.make('Pendulum-v1', render_mode="human"), ac_agent, cfg)
