@@ -89,10 +89,9 @@ class DDPG:
         state = torch.tensor(state, dtype=torch.float).to(self.device)
         next_state = torch.tensor(next_state, dtype=torch.float).to(self.device)
         action = torch.tensor(action, dtype=torch.float).to(self.device)
-        reward = torch.tensor([reward], dtype=torch.float).view(-1, 1).to(self.device)
-        terminated = torch.tensor([terminated], dtype=torch.float).view(-1, 1).to(self.device)
-        truncated = torch.tensor([truncated], dtype=torch.float).view(-1, 1).to(self.device)
-
+        reward = torch.tensor([reward], dtype=torch.float).to(self.device)
+        terminated = torch.tensor([terminated], dtype=torch.float).to(self.device)
+        truncated = torch.tensor([truncated], dtype=torch.float).to(self.device)
         # states = torch.tensor(np.array(transition_dict['states']), dtype=torch.float).to(self.device)
         # actions = (torch.tensor(np.array(transition_dict['actions']), dtype=torch.float).to(self.device)) 
         # rewards = torch.tensor(transition_dict['rewards'], dtype=torch.float).view(-1, 1).to(self.device)
@@ -105,7 +104,7 @@ class DDPG:
     def recall(self):
         batch = self.memory.sample(self.batch_size).to(self.device)
         state, next_state, action, reward, terminated, truncated = (batch.get(key) for key in ("state", "next_state", "action", "reward", "terminated", "truncated"))
-        return state, next_state, action.squeeze(), reward.squeeze(), terminated.squeeze(), truncated.squeeze()
+        return state, next_state, action, reward.squeeze(), terminated.squeeze(), truncated.squeeze()
     
     def soft_update(self, net, target_net):
         for param_target, param in zip(target_net.parameters(), net.parameters()):
@@ -127,7 +126,10 @@ class DDPG:
         state, next_state, action, reward, terminated, truncated = self.recall()
         done = (terminated.bool() | truncated.bool()).float()
 
+        # print(state.shape, next_state.shape, action.shape, reward.shape, terminated.shape, truncated.shape, done.shape)
+        
         q_targets = reward + self.gamma * self.target_critic(next_state, self.target_actor(next_state)) * (1.0 - done)
+        # print(q_targets.shape)
         critic_loss = torch.mean(F.mse_loss(q_targets, self.critic(state, action)))
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
@@ -141,7 +143,7 @@ class DDPG:
         self.soft_update(self.actor, self.target_actor)  
         self.soft_update(self.critic, self.target_critic)
 
-        return q_targets.item(), critic_loss.item(), actor_loss.item()
+        return q_targets.mean().item(), critic_loss.item(), actor_loss.item()
 
     def evaluate_policy(self, episodes):
         """Evaluate the agent's performance with state observations"""
