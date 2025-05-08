@@ -125,9 +125,9 @@ class DDPG:
         save_interval = 50_000          # env steps
         max_to_keep   = 10              # rolling buffer
         best_mean     = -float("inf")
-        ckpt_dir      = Path("checkpoints"); ckpt_dir.mkdir(exist_ok=True)
+        ckpt_dir      = Path("checkpoints_stand"); ckpt_dir.mkdir(exist_ok=True)
 
-        episodes_per_train = 200
+        episodes_per_train = 100
 
         for i in range(episodes_per_train):
             with tqdm(total=int(self.numOfEpisodes / episodes_per_train), desc='Iteration %d' % i) as pbar:
@@ -246,7 +246,7 @@ class replayBuffer:
     
 def make_env():
 	# Create environment with state observations
-	env_name = "humanoid-walk"
+	env_name = "humanoid-stand"
 	env = make_dmc_env(env_name, np.random.randint(0, 1000000), flatten=True, use_pixels=False)
 	return env
 
@@ -272,4 +272,3 @@ if __name__ == '__main__':
                  numOfEpisodes=200_000,
                  env=env)
     agent.DDPGtrain()
-    agent.save_model('ddpg_model.pth')
