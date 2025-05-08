@@ -86,12 +86,19 @@ class DDPG:
         state = first_if_tuple(state).__array__()
         next_state = first_if_tuple(next_state).__array__()
 
-        state = torch.tensor(state)
-        next_state = torch.tensor(next_state)
-        action = torch.tensor([action])
-        reward = torch.tensor([reward])
-        terminated = torch.tensor([terminated])
-        truncated = torch.tensor([truncated])
+        state = torch.tensor(state, dtype=torch.float).to(self.device)
+        next_state = torch.tensor(next_state, dtype=torch.float).to(self.device)
+        action = torch.tensor(action, dtype=torch.float).to(self.device)
+        reward = torch.tensor([reward], dtype=torch.float).view(-1, 1).to(self.device)
+        terminated = torch.tensor([terminated], dtype=torch.float).view(-1, 1).to(self.device)
+        truncated = torch.tensor([truncated], dtype=torch.float).view(-1, 1).to(self.device)
+
+        # states = torch.tensor(np.array(transition_dict['states']), dtype=torch.float).to(self.device)
+        # actions = (torch.tensor(np.array(transition_dict['actions']), dtype=torch.float).to(self.device)) 
+        # rewards = torch.tensor(transition_dict['rewards'], dtype=torch.float).view(-1, 1).to(self.device)
+        # next_states = torch.tensor(np.array(transition_dict['next_states']), dtype=torch.float).to(self.device)
+        # terminateds = torch.tensor(transition_dict['terminateds'], dtype=torch.float).view(-1, 1).to(self.device)
+        # truncateds = torch.tensor(transition_dict['truncateds'], dtype=torch.float).view(-1, 1).to(self.device)
 
         self.memory.add(TensorDict({"state": state, "next_state": next_state, "action": action, "reward": reward, "terminated": terminated, "truncated": truncated}, batch_size=[]))
 
