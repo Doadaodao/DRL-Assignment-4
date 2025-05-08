@@ -104,8 +104,8 @@ class DDPG:
         for param_target, param in zip(target_net.parameters(), net.parameters()):
             param_target.data.copy_(param_target.data * (1.0 - self.tau) + param.data * self.tau)
 
-    def update(self, transition_dict):
-        if self.curr_step % self.save_every == 0:
+    def update(self):
+        if self.curr_step % self.save_interval == 0:
             save_path = (self.save_dir / f"mario_net_{int(self.curr_step // self.save_every)}.chkpt")
             self.save_model(save_path)
 
