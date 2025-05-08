@@ -3,7 +3,6 @@ import numpy as np
 from tqdm import tqdm
 import torch
 import torch.nn.functional as F
-# import util
 import sys
 import os
 import random
@@ -55,6 +54,7 @@ class DDPG:
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=actor_lr)
 
         self.gamma = gamma
+        self.action_bound = action_bound
         self.sigma = sigma 
         self.tau = tau
 
@@ -66,11 +66,11 @@ class DDPG:
         self.batch_size = batch_size
 
     def take_action(self, state):
-        state = torch.FloatTensor(np.array([state])).to(self.device)
-        action = self.actor(state).detach().cpu().numpy()[0]  
-        action = action + self.sigma * np.random.randn(self.action_dim)
-        # action = np.clip(action, -self.action_bound, self.action_bound)
-        return action
+        state = torch.tensor(state, dtype=torch.float).unsqueeze(0).to(self.device)
+        action = self.actor(state).cpu().detach().numpy().flatten()
+        noise = np.random.normal(0, self.sigma, size=self.action_dim)
+        return np.clip(action + noise, -self.action_bound, self.action_bound)
+
 
     def soft_update(self, net, target_net):
         for param_target, param in zip(target_net.parameters(), net.parameters()):
@@ -103,7 +103,7 @@ class DDPG:
         """Evaluate the agent's performance with state observations"""
         episode_rewards = []
         env = make_env()
-        for episode in range(episodes):
+        for _ in range(episodes):
             state, _ = env.reset(seed=np.random.randint(0, 1000000))
             state, info = self.env.reset()
             episode_reward = 0
@@ -191,24 +191,6 @@ class DDPG:
                 'critic': self.critic.state_dict()}, path)
         
     def load_model(self, path, map_location=None):
-        """
-        Load a checkpoint that was written by self.save_model(path).
-
-        Args
-        ----
-        path : str
-            File name of the checkpoint (e.g. "checkpoints/ddpg_humanoid.pt").
-        map_location : str or torch.device or None
-            Passed straight to torch.load().  Use None to load on the current
-            device, or "cpu" if you saved on GPU but want to inspect on CPU.
-
-        Notes
-        -----
-        • Restores online *and* target networks so training can continue
-        seamlessly.  
-        • Optimiser states are **not** stored; add them if you want exact
-        training continuation.
-        """
         ckpt = torch.load(path, map_location=map_location or self.device)
 
         self.actor.load_state_dict(ckpt["actor"])
@@ -259,13 +241,13 @@ if __name__ == '__main__':
     agent = DDPG(state_dim=env.observation_space.shape[0],
                  hidden_dim=256,
                  action_dim=env.action_space.shape[0],
-                 actor_lr=3e-4,
-                 critic_lr=3e-3,
+                 actor_lr=2.5e-4,
+                 critic_lr=2.5e-4,
                  gamma=0.99,
                  action_bound=env.action_space.high[0],
-                 sigma=0.01,
+                 sigma=0.2,
                  tau=0.005,
-                 buffer_size=10000,
+                 buffer_size=1000000,
                  minimal_size=1000,
                  batch_size=64,
                  device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu'),
