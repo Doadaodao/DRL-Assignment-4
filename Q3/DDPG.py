@@ -8,6 +8,8 @@ import os
 import random
 from collections import deque
 from pathlib import Path
+from tensordict import TensorDict
+from torchrl.data import TensorDictReplayBuffer, LazyMemmapStorage
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dmc import make_dmc_env
@@ -42,7 +44,7 @@ class QValueNet(torch.nn.Module):
 
 class DDPG:
     def __init__(self, state_dim, hidden_dim, action_dim, actor_lr, critic_lr, gamma,
-                action_bound, sigma, tau, buffer_size, minimal_size, batch_size, device, numOfEpisodes, env):
+                action_bound, sigma, tau, buffer_size, minimal_size, batch_size, device, env, save_dir, save_interval):
         self.action_dim = action_dim
         self.actor = PolicyNet(state_dim, hidden_dim, action_dim, action_bound).to(device)
         self.critic = QValueNet(state_dim, hidden_dim, action_dim).to(device)
@@ -60,44 +62,79 @@ class DDPG:
 
         self.device = device
         self.env = env
-        self.numOfEpisodes = numOfEpisodes
         self.buffer_size = buffer_size
         self.minimal_size = minimal_size
         self.batch_size = batch_size
+        self.memory = TensorDictReplayBuffer(storage=LazyMemmapStorage(buffer_size, device=torch.device("cpu")))
 
-    def take_action(self, state):
+        self.curr_step = 0
+        self.save_dir = save_dir
+        self.save_interval = save_interval
+
+    def act(self, state):
+        state = state[0].__array__() if isinstance(state, tuple) else state.__array__()
         state = torch.tensor(state, dtype=torch.float).unsqueeze(0).to(self.device)
         action = self.actor(state).cpu().detach().numpy().flatten()
         noise = np.random.normal(0, self.sigma, size=self.action_dim)
+        self.curr_step += 1
         return np.clip(action + noise, -self.action_bound, self.action_bound)
 
+    def cache(self, state, next_state, action, reward, terminated, truncated):
 
+        def first_if_tuple(x):
+            return x[0] if isinstance(x, tuple) else x
+        state = first_if_tuple(state).__array__()
+        next_state = first_if_tuple(next_state).__array__()
+
+        state = torch.tensor(state)
+        next_state = torch.tensor(next_state)
+        action = torch.tensor([action])
+        reward = torch.tensor([reward])
+        terminated = torch.tensor([terminated])
+        truncated = torch.tensor([truncated])
+
+        self.memory.add(TensorDict({"state": state, "next_state": next_state, "action": action, "reward": reward, "terminated": terminated, "truncated": truncated}, batch_size=[]))
+
+    def recall(self):
+        batch = self.memory.sample(self.batch_size).to(self.device)
+        state, next_state, action, reward, terminated, truncated = (batch.get(key) for key in ("state", "next_state", "action", "reward", "terminated", "truncated"))
+        return state, next_state, action.squeeze(), reward.squeeze(), terminated.squeeze(), truncated.squeeze()
+    
     def soft_update(self, net, target_net):
         for param_target, param in zip(target_net.parameters(), net.parameters()):
             param_target.data.copy_(param_target.data * (1.0 - self.tau) + param.data * self.tau)
 
     def update(self, transition_dict):
-        states = torch.tensor(np.array(transition_dict['states']), dtype=torch.float).to(self.device)
-        actions = (torch.tensor(np.array(transition_dict['actions']), dtype=torch.float).to(self.device)) 
-        rewards = torch.tensor(transition_dict['rewards'], dtype=torch.float).view(-1, 1).to(self.device)
-        next_states = torch.tensor(np.array(transition_dict['next_states']), dtype=torch.float).to(self.device)
-        terminateds = torch.tensor(transition_dict['terminateds'], dtype=torch.float).view(-1, 1).to(self.device)
-        truncateds = torch.tensor(transition_dict['truncateds'], dtype=torch.float).view(-1, 1).to(self.device)
-        dones = (terminateds.bool() | truncateds.bool()).float()
+        if self.curr_step % self.save_every == 0:
+            save_path = (self.save_dir / f"mario_net_{int(self.curr_step // self.save_every)}.chkpt")
+            self.save_model(save_path)
 
-        q_targets = rewards + self.gamma * self.target_critic(next_states, self.target_actor(next_states)) * (1.0 - dones)
-        critic_loss = torch.mean(F.mse_loss(q_targets, self.critic(states, actions)))
+        # states = torch.tensor(np.array(transition_dict['states']), dtype=torch.float).to(self.device)
+        # actions = (torch.tensor(np.array(transition_dict['actions']), dtype=torch.float).to(self.device)) 
+        # rewards = torch.tensor(transition_dict['rewards'], dtype=torch.float).view(-1, 1).to(self.device)
+        # next_states = torch.tensor(np.array(transition_dict['next_states']), dtype=torch.float).to(self.device)
+        # terminateds = torch.tensor(transition_dict['terminateds'], dtype=torch.float).view(-1, 1).to(self.device)
+        # truncateds = torch.tensor(transition_dict['truncateds'], dtype=torch.float).view(-1, 1).to(self.device)
+        # dones = (terminateds.bool() | truncateds.bool()).float()
+
+        state, next_state, action, reward, terminated, truncated = self.recall()
+        done = (terminated.bool() | truncated.bool()).float()
+
+        q_targets = reward + self.gamma * self.target_critic(next_state, self.target_actor(next_state)) * (1.0 - done)
+        critic_loss = torch.mean(F.mse_loss(q_targets, self.critic(state, action)))
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
 
-        actor_loss = -torch.mean(self.critic(states, self.actor(states)))
+        actor_loss = -torch.mean(self.critic(state, self.actor(state)))
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
 
         self.soft_update(self.actor, self.target_actor)  
         self.soft_update(self.critic, self.target_critic)
+
+        return q_targets.item(), critic_loss.item(), actor_loss.item()
 
     def evaluate_policy(self, episodes):
         """Evaluate the agent's performance with state observations"""
@@ -109,7 +146,7 @@ class DDPG:
             episode_reward = 0
             done = False
             while not done:
-                action = self.take_action(state)
+                action = self.act(state)
                 next_state, reward, terminated, truncated, info = self.env.step(action)
                 state = next_state
                 episode_reward += reward
@@ -133,10 +170,11 @@ class DDPG:
             with tqdm(total=int(self.numOfEpisodes / episodes_per_train), desc='Iteration %d' % i) as pbar:
                 for episode in range(int(self.numOfEpisodes / episodes_per_train)):
                     # initialize state
-                    state, info = self.env.reset()
+                    state, _ = self.env.reset()
                     terminated = False
                     truncated = False
                     episodeReward = 0
+
                     # Loop for each step of episode:
                     while not (terminated or truncated):
                         global_step += 1
