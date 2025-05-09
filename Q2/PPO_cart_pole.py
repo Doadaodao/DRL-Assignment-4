@@ -3,11 +3,15 @@ import torch.nn as nn
 from torch.nn import functional as F
 import numpy as np
 import gymnasium as gym
-import copy
 import random
 from collections import deque
 from tqdm import tqdm
 import typing as typ
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from dmc import make_dmc_env
 
 class policyNet(nn.Module):
     """
@@ -51,7 +55,6 @@ class valueNet(nn.Module):
             x = layer['linear_activation'](layer['linear'](x))
         return self.head(x)
 
-
 def compute_advantage(gamma, lmbda, td_delta):
     td_delta = td_delta.detach().numpy()
     adv_list = []
@@ -61,7 +64,6 @@ def compute_advantage(gamma, lmbda, td_delta):
         adv_list.append(adv)
     adv_list.reverse()
     return torch.FloatTensor(adv_list)
-
 
 class PPO:
     def __init__(self,
@@ -183,7 +185,7 @@ class Config:
     buffer_size = 100000
     minimal_size = 1024
     batch_size = 128
-    save_path = './PPO_Pendulum.pth'
+    save_path = './PPO_Cart_Pole.pth'
 
     max_episode_rewards = 260
     max_episode_steps = 260
@@ -240,9 +242,15 @@ def train_agent(env, cfg):
     env.close()
     return ac_agent
 
+def make_env():
+    # Create environment with image observations
+    env_name = "cartpole-balance"
+    env = make_dmc_env(env_name, np.random.randint(0, 1000000), flatten=True, use_pixels=False)
+    return env
+
 if __name__ == '__main__':
-    print('Training Pendulum-v1')
-    env = gym.make('Pendulum-v1')
+    print('Training CartPole')
+    env = make_env()
     cfg = Config(env)
     ac_agent = train_agent(env, cfg)
     ac_agent.actor.load_state_dict(torch.load(cfg.save_path))
