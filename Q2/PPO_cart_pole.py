@@ -103,7 +103,7 @@ class PPO:
         state = torch.FloatTensor(state).to(self.device)
         action = torch.tensor(action).view(-1, 1).to(self.device)
         reward = torch.tensor(reward).view(-1, 1).to(self.device)
-        # reward = (reward + 8.0) / 8.0  # reward modification
+        reward = (reward + 8.0) / 8.0  # reward modification
         next_state = torch.FloatTensor(next_state).to(self.device)
         done = torch.FloatTensor(done).view(-1, 1).to(self.device)
         

@@ -98,32 +98,27 @@ def eval_score():
 if __name__ == "__main__":
     score = eval_score()
     # Define the baselines
-    RANDOM_SCORE = 200
-    PPO_SCORE = 950
+    SAC_SCORE = 450
     
     # Calculate grade percentage according to provided rules
     grade_percentage = 0
     
-    if score >= PPO_SCORE:
+    if score >= SAC_SCORE:
         # Beat PPO baseline
-        grade_percentage = 30
-        result = "EXCELLENT! Beat PPO baseline"
-    elif score >= RANDOM_SCORE:
+        grade_percentage = 20
+        result = "EXCELLENT! Beat baseline"
+    else:
         # Beat Random but not PPO
         # Normalize score between random and PPO
-        normalized_score = (score - RANDOM_SCORE) / (PPO_SCORE - RANDOM_SCORE)
-        grade_percentage = 10 + normalized_score * 20
-        result = "GOOD! Beat Random baseline but not PPO"
-    else:
-        # Did not beat Random
-        grade_percentage = 0
-        result = "DID NOT meet the Random baseline"
+        normalized_score = (score) / (SAC_SCORE)
+        grade_percentage = normalized_score * 20
+        result = "DID NOT meet the baseline"
     
     print(f"\n{result}")
-    print(f"Grade: {grade_percentage:.2f}% out of 30%")
-    if grade_percentage >= 30:
+    print(f"Grade: {grade_percentage:.2f}% out of 20%")
+    if grade_percentage >= 20:
         print("\033[92m🌟 CONGRATULATIONS! You got the MVP! 🌟\033[0m")
     elif grade_percentage > 0:
-        print(f"\033[93mYou earned {grade_percentage:.2f}% out of 30%.\033[0m")
+        print(f"\033[93mYou earned {grade_percentage:.2f}% out of 20%.\033[0m")
     else:
         print("\033[91mUnfortunately, you did not pass the evaluation.\033[0m")

@@ -104,7 +104,7 @@ class DDPG:
     def recall(self):
         batch = self.memory.sample(self.batch_size).to(self.device)
         state, next_state, action, reward, terminated, truncated = (batch.get(key) for key in ("state", "next_state", "action", "reward", "terminated", "truncated"))
-        return state, next_state, action, reward.squeeze(), terminated.squeeze(), truncated.squeeze()
+        return state, next_state, action, reward, terminated, truncated
     
     def soft_update(self, net, target_net):
         for param_target, param in zip(target_net.parameters(), net.parameters()):
@@ -112,7 +112,7 @@ class DDPG:
 
     def update(self):
         if self.curr_step % self.save_interval == 0:
-            save_path = (self.save_dir / f"mario_net_{int(self.curr_step // self.save_every)}.chkpt")
+            save_path = (self.save_dir / f"mario_net_{int(self.curr_step // self.save_interval)}.chkpt")
             self.save_model(save_path)
 
         # states = torch.tensor(np.array(transition_dict['states']), dtype=torch.float).to(self.device)
@@ -129,7 +129,6 @@ class DDPG:
         # print(state.shape, next_state.shape, action.shape, reward.shape, terminated.shape, truncated.shape, done.shape)
         
         q_targets = reward + self.gamma * self.target_critic(next_state, self.target_actor(next_state)) * (1.0 - done)
-        # print(q_targets.shape)
         critic_loss = torch.mean(F.mse_loss(q_targets, self.critic(state, action)))
         self.critic_optimizer.zero_grad()
         critic_loss.backward()

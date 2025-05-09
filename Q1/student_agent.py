@@ -22,8 +22,7 @@ class Agent(object):
             PPO_kwargs=self.cfg.PPO_kwargs,
             device=self.cfg.device
         )
-        self.agent.actor.load_state_dict(torch.load(self.cfg.save_path, map_location=torch.device('cpu')))
-
+        self.agent.actor.load_state_dict(torch.load(self.cfg.save_path))
 
     def act(self, observation):
         action = self.agent.policy(observation)

@@ -20,7 +20,7 @@ from dmc import make_dmc_env
 
 def make_env():
 	# Create environment with state observations
-	env_name = "humanoid-walk"
+	env_name = "humanoid-stand"
 	env = make_dmc_env(env_name, np.random.randint(0, 1000000), flatten=True, use_pixels=False)
 	return env
 
@@ -29,7 +29,7 @@ def main():
     print(f"Action space: {env.action_space}")
     print(f"Observation space: {env.observation_space}")
 
-    save_dir = Path("checkpoints") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+    save_dir = Path("checkpoints_stand") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     save_dir.mkdir(parents=True)
 
     agent = DDPG(state_dim=env.observation_space.shape[0],
