@@ -170,7 +170,7 @@ def play(env, env_agent, cfg, episode_count=2):
 
 
 class Config:
-    num_episode = 1000
+    num_episode = 3000
     state_dim = None
     hidden_layers_dim = [ 64, 64, 64 ]
     action_dim = 20
@@ -181,7 +181,7 @@ class Config:
         'eps': 0.2,
         'ppo_epochs': 10
     }
-    gamma = 0.9
+    gamma = 0.99
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     buffer_size = 500000
     minimal_size = 1024
@@ -189,7 +189,7 @@ class Config:
     save_path = './PPO_Cart_Pole.pth'
 
     max_episode_rewards = 200000
-    max_episode_steps = 3000
+    max_episode_steps = 5000
     
     def __init__(self, env):
         self.state_dim = env.observation_space.shape[0]
@@ -219,16 +219,18 @@ def train_agent(env, cfg):
     for i in tq_bar:
         buffer_ = replayBuffer(cfg.buffer_size)
         tq_bar.set_description(f'Episode [ {i+1} / {cfg.num_episode} ]')    
-        s, _ = env.reset()
+        state, _ = env.reset()
         done = False
         episode_rewards = 0
         steps = 0
         while not done:
-            a = ac_agent.policy(s)
-            n_s, r, done, _, _ = env.step(a)
-            buffer_.add(s, a, r, n_s, done)
-            s = n_s
-            episode_rewards += r
+            action = ac_agent.policy(state)
+            next_state, reward, terminated, truncated, _= env.step(action)
+            done = terminated or truncated
+            
+            buffer_.add(state, action, reward, next_state, done)
+            state = next_state
+            episode_rewards += reward
             steps += 1
             if (episode_rewards >= cfg.max_episode_rewards) or (steps >= cfg.max_episode_steps):
                 break
