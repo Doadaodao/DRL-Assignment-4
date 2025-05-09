@@ -1,42 +1,34 @@
 import gymnasium as gym
+import torch
 import numpy as np
-import torch   
-from PPO_cart_pole import PPO, Config
-
-import typing as typ
-import os
-import sys
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from dmc import make_dmc_env
-
-def make_env():
-    # Create environment with image observations
-    env_name = "cartpole-balance"
-    env = make_dmc_env(env_name, np.random.randint(0, 1000000), flatten=True, use_pixels=False)
-    return env
+from DDPG import DDPG, make_env
 
 # Do not modify the input of the 'act' function and the '__init__' function. 
 class Agent(object):
     """Agent that acts randomly."""
     def __init__(self):
-        # Pendulum-v1 has a Box action space with shape (1,)
-        # Actions are in the range [-2.0, 2.0]
-        # self.action_space = gym.spaces.Box(-2.0, 2.0, (1,), np.float32)
-        self.env = make_env()
-        self.cfg = Config(self.env)
-        self.agent = PPO(
-            state_dim=self.cfg.state_dim,
-            hidden_layers_dim=self.cfg.hidden_layers_dim,
-            action_dim=self.cfg.action_dim,
-            actor_lr=self.cfg.actor_lr,
-            critic_lr=self.cfg.critic_lr,
-            gamma=self.cfg.gamma,
-            PPO_kwargs=self.cfg.PPO_kwargs,
-            device=self.cfg.device
-        )
-        self.agent.actor.load_state_dict(torch.load(self.cfg.save_path))
+        self.action_space = gym.spaces.Box(-1.0, 1.0, (21,), np.float64)
+        env = make_env()
+        self.agent = DDPG(state_dim=env.observation_space.shape[0],
+                 hidden_dim=256,
+                 action_dim=env.action_space.shape[0],
+                 actor_lr=3e-4,
+                 critic_lr=3e-3,
+                 gamma=0.99,
+                 action_bound=env.action_space.high[0],
+                 sigma=0.01,
+                 tau=0.005,
+                 buffer_size=10000,
+                 minimal_size=1000,
+                 batch_size=64,
+                 device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu'),
+                 env=env,
+                 save_dir="./checkpoints",
+                 save_interval=1000
+                 )
+        
+        self.agent.load_model("./checkpoints/2025-05-09T09-08-58/mario_net_11.chkpt")
 
     def act(self, observation):
-        action = self.agent.policy(observation)
-        return action
+        return self.agent.act(observation)
+        # return self.action_space.sample()
