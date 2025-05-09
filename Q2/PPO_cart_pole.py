@@ -34,7 +34,8 @@ class policyNet(nn.Module):
         for layer in self.features:
             x = layer['linear_action'](layer['linear'](x))
         
-        mean_ = 2.0 * torch.tanh(self.fc_mu(x))
+        # mean_ = 2.0 * torch.tanh(self.fc_mu(x))
+        mean_ = torch.tanh(self.fc_mu(x))
         std = F.softplus(self.fc_std(x))
         return mean_, std
 
@@ -102,7 +103,7 @@ class PPO:
         state = torch.FloatTensor(state).to(self.device)
         action = torch.tensor(action).view(-1, 1).to(self.device)
         reward = torch.tensor(reward).view(-1, 1).to(self.device)
-        reward = (reward + 8.0) / 8.0  # reward modification
+        # reward = (reward + 8.0) / 8.0  # reward modification
         next_state = torch.FloatTensor(next_state).to(self.device)
         done = torch.FloatTensor(done).view(-1, 1).to(self.device)
         
@@ -169,7 +170,7 @@ def play(env, env_agent, cfg, episode_count=2):
 
 
 class Config:
-    num_episode = 1200
+    num_episode = 1000
     state_dim = None
     hidden_layers_dim = [ 64, 64, 64 ]
     action_dim = 20
@@ -182,13 +183,13 @@ class Config:
     }
     gamma = 0.9
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    buffer_size = 100000
+    buffer_size = 500000
     minimal_size = 1024
-    batch_size = 128
+    batch_size = 64
     save_path = './PPO_Cart_Pole.pth'
 
-    max_episode_rewards = 260
-    max_episode_steps = 260
+    max_episode_rewards = 200000
+    max_episode_steps = 3000
     
     def __init__(self, env):
         self.state_dim = env.observation_space.shape[0]
@@ -197,6 +198,7 @@ class Config:
         except Exception as e:
             self.action_dim = env.action_space.shape[0]
         print(f'device={self.device} | env={str(env)}')
+        print(f'state_dim={self.state_dim} | action_dim={self.action_dim}')
 
 
 def train_agent(env, cfg):
