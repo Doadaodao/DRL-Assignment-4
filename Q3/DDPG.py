@@ -228,8 +228,12 @@ class DDPG:
     
     def save_model(self, path):
         torch.save({'actor': self.actor.state_dict(),
-                'critic': self.critic.state_dict()}, path)
-        
+                'critic': self.critic.state_dict(),
+                'target_actor': self.target_actor.state_dict(),
+                'target_critic': self.target_critic.state_dict()}, path)
+        print(f"[DDPG] checkpoint saved to «{path}»")
+
+
     def load_model(self, path, map_location=None):
         ckpt = torch.load(path, map_location=map_location or self.device)
 
