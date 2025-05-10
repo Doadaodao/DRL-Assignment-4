@@ -240,9 +240,12 @@ class DDPG:
         self.actor.load_state_dict(ckpt["actor"])
         self.critic.load_state_dict(ckpt["critic"])
 
-        # keep target nets in sync
-        self.target_actor.load_state_dict(self.actor.state_dict())
-        self.target_critic.load_state_dict(self.critic.state_dict())
+        if "target_actor" in ckpt and "target_critic" in ckpt:
+            self.target_actor.load_state_dict(ckpt["target_actor"])
+            self.target_critic.load_state_dict(ckpt["target_critic"])
+        else:      
+            self.target_actor.load_state_dict(self.actor.state_dict())
+            self.target_critic.load_state_dict(self.critic.state_dict())
 
         print(f"[DDPG] checkpoint loaded from «{path}»")
 
