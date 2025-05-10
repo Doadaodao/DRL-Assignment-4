@@ -115,14 +115,6 @@ class DDPG:
             save_path = (self.save_dir / f"mario_net_{int(self.curr_step // self.save_interval)}.chkpt")
             self.save_model(save_path)
 
-        # states = torch.tensor(np.array(transition_dict['states']), dtype=torch.float).to(self.device)
-        # actions = (torch.tensor(np.array(transition_dict['actions']), dtype=torch.float).to(self.device)) 
-        # rewards = torch.tensor(transition_dict['rewards'], dtype=torch.float).view(-1, 1).to(self.device)
-        # next_states = torch.tensor(np.array(transition_dict['next_states']), dtype=torch.float).to(self.device)
-        # terminateds = torch.tensor(transition_dict['terminateds'], dtype=torch.float).view(-1, 1).to(self.device)
-        # truncateds = torch.tensor(transition_dict['truncateds'], dtype=torch.float).view(-1, 1).to(self.device)
-        # dones = (terminateds.bool() | truncateds.bool()).float()
-
         state, next_state, action, reward, terminated, truncated = self.recall()
         done = (terminated.bool() | truncated.bool()).float()
 
@@ -132,11 +124,13 @@ class DDPG:
         critic_loss = torch.mean(F.mse_loss(q_targets, self.critic(state, action)))
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=1.0)
         self.critic_optimizer.step()
 
         actor_loss = -torch.mean(self.critic(state, self.actor(state)))
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=1.0)
         self.actor_optimizer.step()
 
         self.soft_update(self.actor, self.target_actor)  
