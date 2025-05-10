@@ -20,7 +20,7 @@ from dmc import make_dmc_env
 
 def make_env():
 	# Create environment with state observations
-	env_name = "humanoid-stand"
+	env_name = "humanoid-walk"
 	env = make_dmc_env(env_name, np.random.randint(0, 1000000), flatten=True, use_pixels=False)
 	return env
 
@@ -29,21 +29,21 @@ def main():
     print(f"Action space: {env.action_space}")
     print(f"Observation space: {env.observation_space}")
 
-    save_dir = Path("checkpoints_stand") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+    save_dir = Path("checkpoints") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     save_dir.mkdir(parents=True)
 
     agent = DDPG(state_dim=env.observation_space.shape[0],
                  hidden_dim=256,
                  action_dim=env.action_space.shape[0],
-                 actor_lr=2.5e-4,
-                 critic_lr=5e-4,
+                 actor_lr=1e-5,
+                 critic_lr=1e-4,
                  gamma=0.99,
                  action_bound=env.action_space.high[0],
                  sigma=0.2,
-                 tau=0.005,
+                 tau=1e-4,
                  buffer_size=1000000,
                  minimal_size=1000,
-                 batch_size=128,
+                 batch_size=64,
                  device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu'),
                  env=env,
                  save_dir = save_dir, 
