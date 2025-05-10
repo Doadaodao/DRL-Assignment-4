@@ -81,6 +81,7 @@ def eval_score():
             episode_reward += reward
             done = terminated or truncated
             step += 1
+
         
         episode_rewards.append(episode_reward)
     
