@@ -48,6 +48,7 @@ def main():
                  env=env,
                  save_dir = save_dir, 
                  save_interval = 5e3)
+
     
     logger = MetricLogger(save_dir)
 

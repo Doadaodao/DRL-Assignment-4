@@ -36,19 +36,20 @@ def main():
                  hidden_dim=256,
                  action_dim=env.action_space.shape[0],
                  actor_lr=2.5e-4,
-                 critic_lr=2.5e-4,
+                 critic_lr=5e-4,
                  gamma=0.99,
                  action_bound=env.action_space.high[0],
                  sigma=0.2,
                  tau=0.005,
                  buffer_size=1000000,
                  minimal_size=1000,
-                 batch_size=64,
+                 batch_size=128,
                  device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu'),
                  env=env,
                  save_dir = save_dir, 
-                 save_interval = 5e5)
-    
+                 save_interval = 1e5)
+    agent.load_model("./checkpoints/2025-05-09T09-08-58/mario_net_24.chkpt")
+
     logger = MetricLogger(save_dir)
 
     episodes = 400000
