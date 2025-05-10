@@ -7,7 +7,7 @@ from DDPG import DDPG, make_env
 class Agent(object):
     """Agent that acts randomly."""
     def __init__(self):
-        self.action_space = gym.spaces.Box(-1.0, 1.0, (21,), np.float64)
+        # self.action_space = gym.spaces.Box(-1.0, 1.0, (21,), np.float64)
         env = make_env()
         self.agent = DDPG(state_dim=env.observation_space.shape[0],
                  hidden_dim=256,
@@ -27,7 +27,7 @@ class Agent(object):
                  save_interval=1000
                  )
         
-        self.agent.load_model("./checkpoints/2025-05-09T09-08-58/mario_net_11.chkpt")
+        self.agent.load_model("./checkpoints/2025-05-10T00-15-18/mario_net_25.chkpt")
 
     def act(self, observation):
         return self.agent.act(observation)

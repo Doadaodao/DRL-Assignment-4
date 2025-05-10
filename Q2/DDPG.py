@@ -274,7 +274,7 @@ class replayBuffer:
     
 def make_env():
 	# Create environment with state observations
-	env_name = "humanoid-walk"
+	env_name = "cartpole-balance"
 	env = make_dmc_env(env_name, np.random.randint(0, 1000000), flatten=True, use_pixels=False)
 	return env
 

@@ -33,8 +33,8 @@ class Agent(object):
                  save_interval=1000
                  )
         
-        self.agent.load_model("./checkpoints/2025-05-09T09-08-58/mario_net_11.chkpt")
-        # self.agent.load_model("./checkpoints_stand/2025-05-09T11-19-32/mario_net_8.chkpt")
+        self.agent.load_model("./checkpoints/2025-05-09T09-08-58/mario_net_24.chkpt")
+        # self.agent.load_model("./checkpoints_stand/2025-05-09T11-19-32/mario_net_10.chkpt")
         # self.agent.load_model("./checkpoints/ddpg_step_004300k.pt")
 
     def act(self, observation):
