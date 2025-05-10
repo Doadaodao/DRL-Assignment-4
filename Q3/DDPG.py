@@ -78,6 +78,13 @@ class DDPG:
         noise = np.random.normal(0, self.sigma, size=self.action_dim)
         self.curr_step += 1
         return np.clip(action + noise, -self.action_bound, self.action_bound)
+    
+    def act_without_noise(self, state):
+        state = state[0].__array__() if isinstance(state, tuple) else state.__array__()
+        state = torch.tensor(state, dtype=torch.float).unsqueeze(0).to(self.device)
+        action = self.actor(state).cpu().detach().numpy().flatten()
+        self.curr_step += 1
+        return np.clip(action, -self.action_bound, self.action_bound)
 
     def cache(self, state, next_state, action, reward, terminated, truncated):
 

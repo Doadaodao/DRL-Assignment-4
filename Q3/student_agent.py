@@ -38,5 +38,5 @@ class Agent(object):
         # self.agent.load_model("./checkpoints/ddpg_step_004300k.pt")
 
     def act(self, observation):
-        return self.agent.act(observation)
+        return self.agent.act_without_noise(observation)
         # return self.action_space.sample()
