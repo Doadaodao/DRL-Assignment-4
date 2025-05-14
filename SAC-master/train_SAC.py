@@ -58,7 +58,9 @@ if __name__ == "__main__":
                 alpha=alpha,
                 lr=lr,
                 action_bounds=action_bounds,
-                reward_scale=reward_scale)
+                reward_scale=reward_scale,
+                save_dir = save_dir, 
+                save_interval = 2e5)
 
     agent.load_model("./checkpoints/2025-05-10T15-26-02/mario_net_34.chkpt")
 

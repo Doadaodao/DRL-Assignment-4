@@ -201,7 +201,7 @@ class SAC:
 
     #     return states, rewards, dones, actions, next_states
 
-    def train(self):
+    def update(self):
         if self.curr_step % self.save_interval == 0:
             save_path = (self.save_dir / f"net_{int(self.curr_step // self.save_interval)}.chkpt")
             self.save_model(save_path)
