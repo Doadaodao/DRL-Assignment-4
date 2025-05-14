@@ -62,7 +62,7 @@ if __name__ == "__main__":
                 save_dir = save_dir, 
                 save_interval = 2e5)
 
-    agent.load_model("./checkpoints/2025-05-10T15-26-02/mario_net_34.chkpt")
+    # agent.load_model("./checkpoints/2025-05-10T15-26-02/mario_net_34.chkpt")
 
     logger = MetricLogger(save_dir)
     episodes = 20000

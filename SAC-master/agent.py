@@ -255,12 +255,14 @@ class SAC:
 
             self.soft_update_target_network(self.value_network, self.value_target_network)
 
-            return value_loss.item(), 0.5 * (q1_loss + q2_loss).item(), policy_loss.item()
+            return 0.5 * (q1_loss + q2_loss).item(), policy_loss.item(), value_loss.item()
 
     def act(self, state):
         state = state[0].__array__() if isinstance(state, tuple) else state.__array__()
         state = torch.tensor(state, dtype=torch.float).unsqueeze(0).to(self.device)
         action, _ = self.policy_network.sample_or_likelihood(state)
+        action = action.cpu().detach().numpy().flatten()
+        self.curr_step += 1
         return np.clip(action, self.action_bounds[0], self.action_bounds[1])
     
     def save_model(self, path):
