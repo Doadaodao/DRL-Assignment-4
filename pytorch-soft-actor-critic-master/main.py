@@ -87,7 +87,7 @@ for i_episode in itertools.count(1):
     episode_reward = 0
     episode_steps = 0
     done = False
-    state = env.reset()
+    state, _ = env.reset()
 
     while not done:
         if args.start_steps > total_numsteps:
@@ -132,13 +132,14 @@ for i_episode in itertools.count(1):
         avg_reward = 0.
         episodes = 10
         for _  in range(episodes):
-            state = env.reset()
+            state, _ = env.reset()
             episode_reward = 0
             done = False
             while not done:
                 action = agent.select_action(state, evaluate=True)
 
-                next_state, reward, done, _ = env.step(action)
+                next_state, reward, terminated, truncated, info = env.step(action)
+                done = terminated or truncated
                 episode_reward += reward
 
 
