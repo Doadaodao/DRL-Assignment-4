@@ -1,6 +1,5 @@
 import argparse
 import datetime
-import gym
 import numpy as np
 import itertools
 import torch
@@ -117,7 +116,7 @@ for i_episode in itertools.count(1):
 
         # Ignore the "done" signal if it comes from hitting the time horizon.
         # (https://github.com/openai/spinningup/blob/master/spinup/algos/sac/sac.py)
-        mask = 1 if episode_steps == env._max_episode_steps else float(not done)
+        mask = 1 if terminated or truncated else float(not done)
 
         memory.push(state, action, reward, next_state, mask) # Append transition to memory
 
