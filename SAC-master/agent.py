@@ -112,7 +112,9 @@ class PolicyNetwork(nn.Module):
         # Enforcing action bounds
         log_prob -= torch.log(1 - action ** 2 + 1e-6)
         log_prob = log_prob.sum(-1, keepdim=True)
-        return (action * self.action_bounds[1]).clamp_(self.action_bounds[0], self.action_bounds[1]), log_prob
+
+        action = self.action_bounds[0] + 0.5 * (action + 1.0) * (self.action_bounds[1] - self.action_bounds[0])
+        return action, log_prob
 
 
 
@@ -129,8 +131,9 @@ class SAC:
         self.lr = lr
         self.action_bounds = action_bounds
         self.reward_scale = reward_scale
-        # self.memory = Memory(memory_size=self.memory_size)
+        
         self.memory = TensorDictReplayBuffer(storage=LazyMemmapStorage(memory_size, device=torch.device("cpu")))
+        self.warmup = 10000
 
         self.curr_step = 0
         self.save_dir = save_dir
@@ -171,49 +174,21 @@ class SAC:
         
         self.memory.add(TensorDict({"state": state, "next_state": next_state, "action": action, "reward": reward, "terminated": terminated, "truncated": truncated}, batch_size=[]))
 
-
-    # def store(self, state, reward, done, action, next_state):
-    #     def first_if_tuple(x):
-    #         return x[0] if isinstance(x, tuple) else x
-    #     state = first_if_tuple(state).__array__()
-    #     next_state = first_if_tuple(next_state).__array__()
-        
-    #     state = from_numpy(state).float().to("cpu")
-    #     reward = torch.Tensor([reward]).to("cpu")
-    #     done = torch.Tensor([done]).to("cpu")
-    #     action = torch.Tensor([action]).to("cpu")
-    #     next_state = from_numpy(next_state).float().to("cpu")
-    #     self.memory.add(state, reward, done, action, next_state)
-
     def recall(self):
         batch = self.memory.sample(self.batch_size).to(self.device)
         state, next_state, action, reward, terminated, truncated = (batch.get(key) for key in ("state", "next_state", "action", "reward", "terminated", "truncated"))
         return state, next_state, action, reward, terminated, truncated
     
-    # def unpack(self, batch):
-    #     batch = Transition(*zip(*batch))
-
-    #     states = torch.cat(batch.state).view(self.batch_size, self.n_states).to(self.device)
-    #     rewards = torch.cat(batch.reward).view(self.batch_size, 1).to(self.device)
-    #     dones = torch.cat(batch.done).view(self.batch_size, 1).to(self.device)
-    #     actions = torch.cat(batch.action).view(-1, self.n_actions).to(self.device)
-    #     next_states = torch.cat(batch.next_state).view(self.batch_size, self.n_states).to(self.device)
-
-    #     return states, rewards, dones, actions, next_states
-
     def update(self):
         if self.curr_step % self.save_interval == 0:
             save_path = (self.save_dir / f"net_{int(self.curr_step // self.save_interval)}.chkpt")
             self.save_model(save_path)
 
-        if len(self.memory) < self.batch_size:
+        if len(self.memory) < self.warmup:
             return 0, 0, 0
         else:
             states, next_states, actions, rewards, terminated, truncated = self.recall()
             dones = (terminated.bool() | truncated.bool()).float()
-
-            # batch = self.memory.sample(self.batch_size)
-            # states, rewards, dones, actions, next_states = self.unpack(batch)
 
             # Calculating the value target
             reparam_actions, log_probs = self.policy_network.sample_or_likelihood(states)
@@ -263,7 +238,7 @@ class SAC:
         action, _ = self.policy_network.sample_or_likelihood(state)
         action = action.cpu().detach().numpy().flatten()
         self.curr_step += 1
-        return np.clip(action, self.action_bounds[0], self.action_bounds[1])
+        return action
     
     def save_model(self, path):
         torch.save({'policy_network': self.policy_network.state_dict(),

@@ -42,11 +42,11 @@ if __name__ == "__main__":
 
     ENV_NAME = "humanoid-walk"
     memory_size = 1e+6
-    batch_size = 256
+    batch_size = 64
     gamma = 0.99
-    alpha = 1
-    lr = 3e-4
-    reward_scale = 20
+    alpha = 0.2
+    lr = 1e-5
+    reward_scale = 10
 
 
     agent = SAC(env_name=ENV_NAME,
@@ -78,9 +78,11 @@ if __name__ == "__main__":
 
             # Run agent on the state
             action = agent.act(state)
+            # print(f"Action: {action}")
 
             # Agent performs action
             next_state, reward, terminated, truncated, info = env.step(action)
+            # print(f"Reward: {reward}")
 
             # Remember
             agent.cache(state, next_state, action, reward, terminated, truncated)
@@ -96,5 +98,5 @@ if __name__ == "__main__":
 
         logger.log_episode()
 
-        if (e % 20 == 0) or (e == episodes - 1):
+        if ((e + 1) % 20 == 0) or (e == episodes - 1):
             logger.record(episode=e, step=agent.curr_step)
