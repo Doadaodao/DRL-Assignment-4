@@ -14,6 +14,12 @@ from torchrl.data import TensorDictReplayBuffer, LazyMemmapStorage # type: ignor
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dmc import make_dmc_env
 
+def make_env():
+	# Create environment with state observations
+	env_name = "humanoid-walk"
+	env = make_dmc_env(env_name, np.random.randint(0, 1000000), flatten=True, use_pixels=False)
+	return env
+
 class PolicyNet(torch.nn.Module):
     def __init__(self, state_dim, hidden_dim, action_dim, action_bound):
         super(PolicyNet, self).__init__()

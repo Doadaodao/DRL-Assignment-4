@@ -45,12 +45,12 @@ class SAC(object):
 
     def select_action(self, state, evaluate=False):
         state = torch.FloatTensor(state).to(self.device).unsqueeze(0)
-        print("state.shape", state.shape)
+        # print("state.shape", state.shape)
         if evaluate is False:
             action, _, _ = self.policy.sample(state)
         else:
             _, _, action = self.policy.sample(state)
-        print("action.shape", action.shape)
+        # print("action.shape", action.shape)
         return action.detach().cpu().numpy()[0]
 
     def update_parameters(self, memory, batch_size, updates):
@@ -63,11 +63,11 @@ class SAC(object):
         reward_batch = torch.FloatTensor(reward_batch).to(self.device).unsqueeze(1)
         mask_batch = torch.FloatTensor(mask_batch).to(self.device).unsqueeze(1)
         # print the shapes of the tensors
-        print("state_batch.shape", state_batch.shape)
-        print("next_state_batch.shape", next_state_batch.shape)
-        print("action_batch.shape", action_batch.shape)
-        print("reward_batch.shape", reward_batch.shape)
-        print("mask_batch.shape", mask_batch.shape)
+        # print("state_batch.shape", state_batch.shape)
+        # print("next_state_batch.shape", next_state_batch.shape)
+        # print("action_batch.shape", action_batch.shape)
+        # print("reward_batch.shape", reward_batch.shape)
+        # print("mask_batch.shape", mask_batch.shape)
 
         with torch.no_grad():
             next_state_action, next_state_log_pi, _ = self.policy.sample(next_state_batch)

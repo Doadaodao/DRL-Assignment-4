@@ -33,9 +33,9 @@ class Agent(object):
                  save_interval=1000
                  )
         
-        # self.agent.load_model("./checkpoints/2025-05-09T09-08-58/mario_net_24.chkpt")
-        self.agent.load_model("./checkpoints/2025-05-10T15-26-02/mario_net_34.chkpt")
-        # self.agent.load_model("./checkpoints/ddpg_step_004300k.pt")
+        # best = 65
+        self.agent.load_model("./checkpoints/2025-05-12T14-29-14/mario_net_105.chkpt")
+
 
     def act(self, observation):
         return self.agent.act_without_noise(observation)

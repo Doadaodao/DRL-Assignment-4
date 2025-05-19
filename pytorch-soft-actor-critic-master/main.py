@@ -43,7 +43,7 @@ parser.add_argument('--hidden_size', type=int, default=256, metavar='N',
                     help='hidden size (default: 256)')
 parser.add_argument('--updates_per_step', type=int, default=1, metavar='N',
                     help='model updates per simulator step (default: 1)')
-parser.add_argument('--start_steps', type=int, default=100, metavar='N',
+parser.add_argument('--start_steps', type=int, default=10000, metavar='N',
                     help='Steps sampling random actions (default: 0)')
 parser.add_argument('--target_update_interval', type=int, default=1, metavar='N',
                     help='Value target update per no. of updates per step (default: 1)')
@@ -138,10 +138,10 @@ for i_episode in itertools.count(1):
         break
 
     logger.log_episode()
-
+    
     if ((i_episode + 1) % 20 == 0):
         logger.record(episode=i_episode, step=i_episode*1000)
-        agent.save_checkpoint("humanoid-walk", i_episode, save_dir)
+        agent.save_checkpoint("humanoid-walk", i_episode)
 
 
     writer.add_scalar('reward/train', episode_reward, i_episode)

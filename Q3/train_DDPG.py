@@ -35,8 +35,8 @@ def main():
     agent = DDPG(state_dim=env.observation_space.shape[0],
                  hidden_dim=256,
                  action_dim=env.action_space.shape[0],
-                 actor_lr=1e-4,
-                 critic_lr=5e-4,
+                 actor_lr=1e-5,
+                 critic_lr=1e-3,
                  gamma=0.99,
                  action_bound=env.action_space.high[0],
                  sigma=0.2,
@@ -49,8 +49,7 @@ def main():
                  save_dir = save_dir, 
                  save_interval = 2e5)
     
-    agent.load_model("./checkpoints/2025-05-10T15-26-02/mario_net_34.chkpt")
-
+    agent.load_model("./checkpoints/2025-05-12T03-13-12/mario_net_23.chkpt")
     logger = MetricLogger(save_dir)
 
     episodes = 400000
@@ -84,7 +83,7 @@ def main():
 
         logger.log_episode()
 
-        if (e % 20 == 0) or (e == episodes - 1):
+        if ((e + 1) % 20 == 0) or (e == episodes - 1):
             logger.record(episode=e, step=agent.curr_step)
 
 if __name__ == '__main__':

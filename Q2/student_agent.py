@@ -27,7 +27,7 @@ class Agent(object):
                  save_interval=1000
                  )
         
-        self.agent.load_model("./checkpoints/2025-05-10T00-15-18/mario_net_25.chkpt")
+        self.agent.load_model("./cart_pole_25.chkpt")
 
     def act(self, observation):
         return self.agent.act(observation)
