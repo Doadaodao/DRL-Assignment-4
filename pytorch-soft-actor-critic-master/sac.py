@@ -60,6 +60,12 @@ class SAC(object):
         action_batch = torch.FloatTensor(action_batch).to(self.device)
         reward_batch = torch.FloatTensor(reward_batch).to(self.device).unsqueeze(1)
         mask_batch = torch.FloatTensor(mask_batch).to(self.device).unsqueeze(1)
+        # print the shapes of the tensors
+        print("state_batch.shape", state_batch.shape)
+        print("next_state_batch.shape", next_state_batch.shape)
+        print("action_batch.shape", action_batch.shape)
+        print("reward_batch.shape", reward_batch.shape)
+        print("mask_batch.shape", mask_batch.shape)
 
         with torch.no_grad():
             next_state_action, next_state_log_pi, _ = self.policy.sample(next_state_batch)
