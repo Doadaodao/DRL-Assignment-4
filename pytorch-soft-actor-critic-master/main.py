@@ -28,7 +28,7 @@ parser.add_argument('--tau', type=float, default=0.005, metavar='G',
                     help='target smoothing coefficient(τ) (default: 0.005)')
 parser.add_argument('--lr', type=float, default=0.00005, metavar='G',
                     help='learning rate (default: 0.0003)')
-parser.add_argument('--alpha', type=float, default=0.2, metavar='G',
+parser.add_argument('--alpha', type=float, default=0.05, metavar='G',
                     help='Temperature parameter α determines the relative importance of the entropy\
                             term against the reward (default: 0.2)')
 parser.add_argument('--automatic_entropy_tuning', type=bool, default=False, metavar='G',
@@ -109,11 +109,11 @@ for i_episode in itertools.count(1):
             for i in range(args.updates_per_step):
                 # Update parameters of all the networks
                 critic_1_loss, critic_2_loss, policy_loss, ent_loss, alpha = agent.update_parameters(memory, args.batch_size, updates)
-                print("critic_1_loss: ", critic_1_loss, 
-                      "critic_2_loss: ", critic_2_loss,
-                      "policy_loss: ", policy_loss,
-                      "ent_loss: ", ent_loss,
-                      "alpha: ", alpha)
+                # print("critic_1_loss: ", critic_1_loss, 
+                #       "critic_2_loss: ", critic_2_loss,
+                #       "policy_loss: ", policy_loss,
+                #       "ent_loss: ", ent_loss,
+                #       "alpha: ", alpha)
                 writer.add_scalar('loss/critic_1', critic_1_loss, updates)
                 writer.add_scalar('loss/critic_2', critic_2_loss, updates)
                 writer.add_scalar('loss/policy', policy_loss, updates)
