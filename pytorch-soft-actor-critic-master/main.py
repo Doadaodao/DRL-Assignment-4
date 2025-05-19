@@ -141,6 +141,7 @@ for i_episode in itertools.count(1):
 
     if ((i_episode + 1) % 20 == 0):
         logger.record(episode=i_episode, step=i_episode*1000)
+        agent.save_checkpoint("humanoid-walk", i_episode, save_dir)
 
 
     writer.add_scalar('reward/train', episode_reward, i_episode)
