@@ -145,26 +145,6 @@ class replayBuffer:
 
     def sample(self, batch_size: int):
         return random.sample(self.buffer, batch_size)
-        
-def play(env, env_agent, cfg, episode_count=2):
-    for e in range(episode_count):
-        s, _ = env.reset()
-        done = False
-        episode_reward = 0
-        episode_cnt = 0
-        while not done:
-            env.render()
-            a = env_agent.policy(s)
-            n_state, reward, done, _, _ = env.step(a)
-            episode_reward += reward
-            episode_cnt += 1
-            s = n_state
-            if (episode_cnt >= 3 * cfg.max_episode_steps) or (episode_reward >= 3*cfg.max_episode_rewards):
-                break
-    
-        print(f'Get reward {episode_reward}. Last {episode_cnt} times')
-    env.close()
-
 
 class Config:
     num_episode = 1200
@@ -245,4 +225,3 @@ if __name__ == '__main__':
     env = gym.make('Pendulum-v1')
     cfg = Config(env)
     ac_agent = train_agent(env, cfg)
-    ac_agent.actor.load_state_dict(torch.load(cfg.save_path))

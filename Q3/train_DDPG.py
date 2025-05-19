@@ -35,21 +35,21 @@ def main():
     agent = DDPG(state_dim=env.observation_space.shape[0],
                  hidden_dim=256,
                  action_dim=env.action_space.shape[0],
-                 actor_lr=1e-5,
-                 critic_lr=1e-3,
+                 actor_lr=5e-5,
+                 critic_lr=5e-4,
                  gamma=0.99,
                  action_bound=env.action_space.high[0],
-                 sigma=0.2,
+                 sigma=0.1,
                  tau=0.005,
                  buffer_size=1000000,
-                 minimal_size=1000,
-                 batch_size=64,
+                 minimal_size=10000,
+                 batch_size=256,
                  device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu'),
                  env=env,
                  save_dir = save_dir, 
-                 save_interval = 2e5)
+                 save_interval = 5e5)
     
-    agent.load_model("./checkpoints/2025-05-12T03-13-12/mario_net_23.chkpt")
+    agent.load_model("./checkpoints/2025-05-12T14-29-14/mario_net_105.chkpt")
     logger = MetricLogger(save_dir)
 
     episodes = 400000
