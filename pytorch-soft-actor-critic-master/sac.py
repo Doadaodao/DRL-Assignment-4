@@ -4,6 +4,8 @@ import torch.nn.functional as F
 from torch.optim import Adam
 from utils import soft_update, hard_update
 from model import GaussianPolicy, QNetwork, DeterministicPolicy
+import datetime
+from pathlib import Path
 
 
 class SAC(object):
@@ -52,6 +54,13 @@ class SAC(object):
         return action.detach().cpu().numpy()[0]
 
     def update_parameters(self, memory, batch_size, updates):
+        save_dir = Path("checkpoints") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+        save_dir.mkdir(parents=True)
+
+        if updates % 50 == 0:
+            save_path = (self.save_dir / f"net_{int(updates // 50)}.chkpt")
+            self.save_model(save_path)
+
         # Sample a batch from memory
         state_batch, action_batch, reward_batch, next_state_batch, mask_batch = memory.sample(batch_size=batch_size)
 
