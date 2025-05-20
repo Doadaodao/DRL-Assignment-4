@@ -1,14 +1,24 @@
-import gymnasium as gym
 import torch
 import numpy as np
-from DDPG import DDPG, make_env
+from DDPG import DDPG
+
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from dmc import make_dmc_env
 
 # Do not modify the input of the 'act' function and the '__init__' function. 
 class Agent(object):
     """Agent that acts randomly."""
     def __init__(self):
-        # self.action_space = gym.spaces.Box(-1.0, 1.0, (21,), np.float64)
+        def make_env():
+            # Create environment with state observations
+            env_name = "cartpole-balance"
+            env = make_dmc_env(env_name, np.random.randint(0, 1000000), flatten=True, use_pixels=False)
+            return env
         env = make_env()
+        
         self.agent = DDPG(state_dim=env.observation_space.shape[0],
                  hidden_dim=256,
                  action_dim=env.action_space.shape[0],
@@ -23,7 +33,7 @@ class Agent(object):
                  batch_size=64,
                  device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu'),
                  env=env,
-                 save_dir="./checkpoints",
+                 save_dir=None,
                  save_interval=1000
                  )
         
@@ -31,4 +41,3 @@ class Agent(object):
 
     def act(self, observation):
         return self.agent.act(observation)
-        # return self.action_space.sample()
