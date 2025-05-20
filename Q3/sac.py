@@ -1,12 +1,128 @@
 import os
+import sys
+import random
+import numpy as np
+import pickle
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
+from torch.distributions import Normal
 from utils import soft_update, hard_update
-from model import GaussianPolicy, QNetwork, DeterministicPolicy
-import datetime
-from pathlib import Path
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from dmc import make_dmc_env
+
+def make_env():
+	# Create environment with state observations
+	env_name = "humanoid-walk"
+	env = make_dmc_env(env_name, np.random.randint(0, 1000000), flatten=True, use_pixels=False)
+	return env
+
+LOG_SIG_MAX = 2
+LOG_SIG_MIN = -20
+epsilon = 1e-6
+
+def weights_init_(m):
+    if isinstance(m, nn.Linear):
+        torch.nn.init.xavier_uniform_(m.weight, gain=1)
+        torch.nn.init.constant_(m.bias, 0)
+
+class ValueNetwork(nn.Module):
+    def __init__(self, num_inputs, hidden_dim):
+        super(ValueNetwork, self).__init__()
+
+        self.linear1 = nn.Linear(num_inputs, hidden_dim)
+        self.linear2 = nn.Linear(hidden_dim, hidden_dim)
+        self.linear3 = nn.Linear(hidden_dim, 1)
+
+        self.apply(weights_init_)
+
+    def forward(self, state):
+        x = F.relu(self.linear1(state))
+        x = F.relu(self.linear2(x))
+        x = self.linear3(x)
+        return x
+
+
+class QNetwork(nn.Module):
+    def __init__(self, num_inputs, num_actions, hidden_dim):
+        super(QNetwork, self).__init__()
+
+        # Q1 architecture
+        self.linear1 = nn.Linear(num_inputs + num_actions, hidden_dim)
+        self.linear2 = nn.Linear(hidden_dim, hidden_dim)
+        self.linear3 = nn.Linear(hidden_dim, 1)
+
+        # Q2 architecture
+        self.linear4 = nn.Linear(num_inputs + num_actions, hidden_dim)
+        self.linear5 = nn.Linear(hidden_dim, hidden_dim)
+        self.linear6 = nn.Linear(hidden_dim, 1)
+
+        self.apply(weights_init_)
+
+    def forward(self, state, action):
+        xu = torch.cat([state, action], 1)
+        
+        x1 = F.relu(self.linear1(xu))
+        x1 = F.relu(self.linear2(x1))
+        x1 = self.linear3(x1)
+
+        x2 = F.relu(self.linear4(xu))
+        x2 = F.relu(self.linear5(x2))
+        x2 = self.linear6(x2)
+
+        return x1, x2
+
+
+class GaussianPolicy(nn.Module):
+    def __init__(self, num_inputs, num_actions, hidden_dim, action_space=None):
+        super(GaussianPolicy, self).__init__()
+        
+        self.linear1 = nn.Linear(num_inputs, hidden_dim)
+        self.linear2 = nn.Linear(hidden_dim, hidden_dim)
+
+        self.mean_linear = nn.Linear(hidden_dim, num_actions)
+        self.log_std_linear = nn.Linear(hidden_dim, num_actions)
+
+        self.apply(weights_init_)
+
+        # action rescaling
+        if action_space is None:
+            self.action_scale = torch.tensor(1.)
+            self.action_bias = torch.tensor(0.)
+        else:
+            self.action_scale = torch.FloatTensor(
+                (action_space.high - action_space.low) / 2.)
+            self.action_bias = torch.FloatTensor(
+                (action_space.high + action_space.low) / 2.)
+
+    def forward(self, state):
+        x = F.relu(self.linear1(state))
+        x = F.relu(self.linear2(x))
+        mean = self.mean_linear(x)
+        log_std = self.log_std_linear(x)
+        log_std = torch.clamp(log_std, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
+        return mean, log_std
+
+    def sample(self, state):
+        mean, log_std = self.forward(state)
+        std = log_std.exp()
+        normal = Normal(mean, std)
+        x_t = normal.rsample()  # for reparameterization trick (mean + std * N(0,1))
+        y_t = torch.tanh(x_t)
+        action = y_t * self.action_scale + self.action_bias
+        log_prob = normal.log_prob(x_t)
+        # Enforcing Action Bound
+        log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + epsilon)
+        log_prob = log_prob.sum(1, keepdim=True)
+        mean = torch.tanh(mean) * self.action_scale + self.action_bias
+        return action, log_prob, mean
+
+    def to(self, device):
+        self.action_scale = self.action_scale.to(device)
+        self.action_bias = self.action_bias.to(device)
+        return super(GaussianPolicy, self).to(device)
 
 class SAC(object):
     def __init__(self, num_inputs, action_space, gamma, tau, alpha, 
@@ -37,18 +153,12 @@ class SAC(object):
         self.policy_optim = Adam(self.policy.parameters(), lr=lr)
 
 
-    def select_action(self, state, evaluate=False):
+    def select_action(self, state):
         state = torch.FloatTensor(state).to(self.device).unsqueeze(0)
-        # print("state.shape", state.shape)
-        if evaluate is False:
-            action, _, _ = self.policy.sample(state)
-        else:
-            _, _, action = self.policy.sample(state)
-        # print("action.shape", action.shape)
+        action, _, _ = self.policy.sample(state)
         return action.detach().cpu().numpy()[0]
 
     def update_parameters(self, memory, batch_size, updates):
-        # Sample a batch from memory
         state_batch, action_batch, reward_batch, next_state_batch, mask_batch = memory.sample(batch_size=batch_size)
 
         state_batch = torch.FloatTensor(state_batch).to(self.device)
@@ -56,13 +166,7 @@ class SAC(object):
         action_batch = torch.FloatTensor(action_batch).to(self.device)
         reward_batch = torch.FloatTensor(reward_batch).to(self.device).unsqueeze(1)
         mask_batch = torch.FloatTensor(mask_batch).to(self.device).unsqueeze(1)
-        # print the shapes of the tensors
-        # print("state_batch.shape", state_batch.shape)
-        # print("next_state_batch.shape", next_state_batch.shape)
-        # print("action_batch.shape", action_batch.shape)
-        # print("reward_batch.shape", reward_batch.shape)
-        # print("mask_batch.shape", mask_batch.shape)
-
+        
         with torch.no_grad():
             next_state_action, next_state_log_pi, _ = self.policy.sample(next_state_batch)
             qf1_next_target, qf2_next_target = self.critic_target(next_state_batch, next_state_action)
@@ -106,6 +210,14 @@ class SAC(object):
             soft_update(self.critic_target, self.critic, self.tau)
 
         return qf1_loss.item(), qf2_loss.item(), policy_loss.item(), alpha_loss.item(), alpha_tlogs.item()
+    
+    def soft_update(target, source, tau):
+        for target_param, param in zip(target.parameters(), source.parameters()):
+            target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
+
+    def hard_update(target, source):
+        for target_param, param in zip(target.parameters(), source.parameters()):
+            target_param.data.copy_(param.data)
 
     # Save model parameters
     def save_checkpoint(self, env_name, suffix="", ckpt_path=None):
@@ -142,3 +254,41 @@ class SAC(object):
             #     self.critic.train()
             #     self.critic_target.train()
 
+class ReplayBuffer:
+    def __init__(self, capacity, seed=123456):
+        random.seed(seed)
+        self.capacity = capacity
+        self.buffer = []
+        self.position = 0
+
+    def push(self, state, action, reward, next_state, done):
+        if len(self.buffer) < self.capacity:
+            self.buffer.append(None)
+        self.buffer[self.position] = (state, action, reward, next_state, done)
+        self.position = (self.position + 1) % self.capacity
+
+    def sample(self, batch_size):
+        batch = random.sample(self.buffer, batch_size)
+        state, action, reward, next_state, done = map(np.stack, zip(*batch))
+        return state, action, reward, next_state, done
+
+    def __len__(self):
+        return len(self.buffer)
+
+    def save_buffer(self, env_name, suffix="", save_path=None):
+        if not os.path.exists('checkpoints/'):
+            os.makedirs('checkpoints/')
+
+        if save_path is None:
+            save_path = "checkpoints/sac_buffer_{}_{}".format(env_name, suffix)
+        print('Saving buffer to {}'.format(save_path))
+
+        with open(save_path, 'wb') as f:
+            pickle.dump(self.buffer, f)
+
+    def load_buffer(self, save_path):
+        print('Loading buffer from {}'.format(save_path))
+
+        with open(save_path, "rb") as f:
+            self.buffer = pickle.load(f)
+            self.position = len(self.buffer) % self.capacity
