@@ -143,6 +143,7 @@ class SAC(object):
     def act(self, state):
         state = torch.FloatTensor(state).to(self.device).unsqueeze(0)
         action, _, _ = self.policy.sample(state)
+        self.curr_step += 1
         return action.detach().cpu().numpy()[0]
     
     def cache(self, state, next_state, action, reward, terminated, truncated):

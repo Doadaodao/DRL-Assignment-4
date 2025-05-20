@@ -36,4 +36,4 @@ class Agent(object):
         self.agent.load_model("./sac_walk_1759.ckpth")
 
     def act(self, observation):
-        return self.agent.select_action(observation, evaluate=False)
+        return self.agent.act(observation)
