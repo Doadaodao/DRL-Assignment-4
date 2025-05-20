@@ -14,7 +14,7 @@ class Agent(object):
         
         self.agent = PPO(
             state_dim=env.observation_space.shape[0],
-            hidden_layers_dim=[64, 64, 64],
+            hidden_dim=64,
             action_dim=env.action_space.shape[0],
             actor_lr=1e-4,
             critic_lr=5e-3,
