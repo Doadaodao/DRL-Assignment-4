@@ -1,7 +1,7 @@
 import datetime
 import numpy as np
 import torch
-from SAC import SAC, ReplayBuffer
+from sac import SAC, ReplayBuffer
 from logger import MetricLogger
 from pathlib import Path
 
@@ -44,11 +44,16 @@ def main():
     updates = 0
 
     episodes = 400000
+    total_numsteps = 0
 
     for e in range(episodes):
         
         state, _ = env.reset()
         done = False
+
+        episode_steps = 0
+        
+        episode_reward = 0
 
         while not done:
             action = agent.select_action(state)  # Sample action from policy
