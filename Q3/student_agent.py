@@ -1,8 +1,7 @@
 import gymnasium as gym
 import torch
 import numpy as np
-from sac import SAC
-import argparse
+from DDPG import DDPG, make_env
 
 import os
 import sys
@@ -14,25 +13,30 @@ from dmc import make_dmc_env
 class Agent(object):
     """Agent that acts randomly."""
     def __init__(self):
-        def make_env():
-            # Create environment with state observations
-            env_name = "humanoid-walk"
-            env = make_dmc_env(env_name, np.random.randint(0, 1000000), flatten=True, use_pixels=False)
-            return env
+        self.action_space = gym.spaces.Box(-1.0, 1.0, (21,), np.float64)
         env = make_env()
+        self.agent = DDPG(state_dim=env.observation_space.shape[0],
+                 hidden_dim=256,
+                 action_dim=env.action_space.shape[0],
+                 actor_lr=3e-4,
+                 critic_lr=3e-3,
+                 gamma=0.99,
+                 action_bound=env.action_space.high[0],
+                 sigma=0.01,
+                 tau=0.005,
+                 buffer_size=10000,
+                 minimal_size=1000,
+                 batch_size=64,
+                 device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu'),
+                 env=env,
+                 save_dir="./checkpoints",
+                 save_interval=1000
+                 )
         
-        self.agent = SAC(num_inputs = env.observation_space.shape[0], 
-                         action_space=env.action_space,
-                         gamma=0.99,
-                         tau=0.005, 
-                         alpha=0.2, 
-                         target_update_interval=1, 
-                         automatic_entropy_tuning=True, 
-                         device="cuda" if torch.cuda.is_available() else "cpu",
-                         hidden_size=256,
-                         lr=0.0003)
+        # best = 65
+        self.agent.load_model("./checkpoints/2025-05-12T14-29-14/mario_net_105.chkpt")
 
-        self.agent.load_checkpoint("./sac_checkpoint")
 
     def act(self, observation):
-        return self.agent.select_action(observation, evaluate=False)
+        return self.agent.act_without_noise(observation)
+        # return self.action_space.sample()
