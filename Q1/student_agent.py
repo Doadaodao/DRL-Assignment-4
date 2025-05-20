@@ -15,7 +15,9 @@ class Agent(object):
             actor_lr=1e-4,
             critic_lr=5e-3,
             gamma=0.9,
-            PPO_kwargs={'lmbda': 0.9, 'eps': 0.2, 'ppo_epochs': 10},
+            lmbda=0.9,
+            eps=0.2,
+            ppo_epochs=10,
             device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         )
         self.agent.actor.load_state_dict(torch.load("./PPO_Pendulum.pth"))

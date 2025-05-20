@@ -43,36 +43,19 @@ class valueNet(nn.Module):
             x = layer['linear_activation'](layer['linear'](x))
         return self.head(x)
 
-def compute_advantage(gamma, lmbda, td_delta):
-    td_delta = td_delta.detach().numpy()
-    adv_list = []
-    adv = 0
-    for delta in td_delta[::-1]:
-        adv = gamma * lmbda * adv + delta
-        adv_list.append(adv)
-    adv_list.reverse()
-    return torch.FloatTensor(adv_list)
-
 class PPO:
-    def __init__(self,
-                state_dim: int,
-                hidden_layers_dim: typ.List,
-                action_dim: int,
-                actor_lr: float,
-                critic_lr: float,
-                gamma: float,
-                PPO_kwargs: typ.Dict,
-                device: torch.device
-                ):
+    def __init__(self, state_dim, hidden_layers_dim, action_dim,
+                actor_lr, critic_lr, gamma, lmbda, eps, ppo_epochs,
+                device):
         self.actor = policyNet(state_dim, hidden_layers_dim, action_dim).to(device)
         self.critic = valueNet(state_dim, hidden_layers_dim).to(device)
         self.actor_opt = torch.optim.Adam(self.actor.parameters(), lr=actor_lr)
         self.critic_opt = torch.optim.Adam(self.critic.parameters(), lr=critic_lr)
         
         self.gamma = gamma
-        self.lmbda = PPO_kwargs['lmbda']
-        self.ppo_epochs = PPO_kwargs['ppo_epochs']
-        self.eps = PPO_kwargs['eps']
+        self.lmbda = lmbda
+        self.eps = eps
+        self.ppo_epochs = ppo_epochs
         self.count = 0 
         self.device = device
     
@@ -90,12 +73,23 @@ class PPO:
         state = torch.FloatTensor(state).to(self.device)
         action = torch.tensor(action).view(-1, 1).to(self.device)
         reward = torch.tensor(reward).view(-1, 1).to(self.device)
-        reward = (reward + 8.0) / 8.0  # reward modification
+        reward = (reward + 8.0) / 8.0
         next_state = torch.FloatTensor(next_state).to(self.device)
         done = torch.FloatTensor(done).view(-1, 1).to(self.device)
         
         td_target = reward + self.gamma * self.critic(next_state) * (1 - done)
         td_delta = td_target - self.critic(state)
+
+        def compute_advantage(gamma, lmbda, td_delta):
+            td_delta = td_delta.detach().numpy()
+            adv_list = []
+            adv = 0
+            for delta in td_delta[::-1]:
+                adv = gamma * lmbda * adv + delta
+                adv_list.append(adv)
+            adv_list.reverse()
+            return torch.FloatTensor(adv_list)
+        # Compute advantage
         advantage = compute_advantage(self.gamma, self.lmbda, td_delta.cpu()).to(self.device)
                 
         mu, std = self.actor(state)
@@ -107,7 +101,6 @@ class PPO:
             action_dists = torch.distributions.Normal(mu, std)
             log_prob = action_dists.log_prob(action)
             
-            # e(log(a/b))
             ratio = torch.exp(log_prob - old_log_probs)
             surr1 = ratio * advantage
             surr2 = torch.clamp(ratio, 1 - self.eps, 1 + self.eps) * advantage
