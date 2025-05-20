@@ -137,12 +137,12 @@ class SAC(object):
             self.critic_optim.load_state_dict(checkpoint['critic_optimizer_state_dict'])
             self.policy_optim.load_state_dict(checkpoint['policy_optimizer_state_dict'])
 
-            if evaluate:
-                self.policy.eval()
-                self.critic.eval()
-                self.critic_target.eval()
-            else:
-                self.policy.train()
-                self.critic.train()
-                self.critic_target.train()
+            # if evaluate:
+            #     self.policy.eval()
+            #     self.critic.eval()
+            #     self.critic_target.eval()
+            # else:
+            #     self.policy.train()
+            #     self.critic.train()
+            #     self.critic_target.train()
 
