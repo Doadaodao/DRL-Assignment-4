@@ -5,37 +5,42 @@ import random
 from collections import deque
 import typing as typ
 
-class PolicyNet(torch.nn.Module):
-    def __init__(self, state_dim, action_dim, hidden_dim):
-        super(PolicyNet, self).__init__()
-        self.linear1 = torch.nn.Linear(state_dim, hidden_dim)
-        self.linear2 = torch.nn.Linear(hidden_dim, hidden_dim)
-        self.linear3 = torch.nn.Linear(hidden_dim, hidden_dim)
-        self.mean_linear = torch.nn.Linear(hidden_dim, action_dim)
-        self.std_linear = torch.nn.Linear(hidden_dim, action_dim)
+class policyNet(nn.Module):
+    def __init__(self, state_dim: int, hidden_layers_dim: typ.List, action_dim: int):
+        super(policyNet, self).__init__()
+        self.features = nn.ModuleList()
+        for idx, h in enumerate(hidden_layers_dim):
+            self.features.append(nn.ModuleDict({
+                'linear': nn.Linear(hidden_layers_dim[idx-1] if idx else state_dim, h),
+                'linear_action': nn.ReLU(inplace=True)
+            }))
+
+        self.fc_mu = nn.Linear(hidden_layers_dim[-1], action_dim)
+        self.fc_std = nn.Linear(hidden_layers_dim[-1], action_dim)
 
     def forward(self, x):
-        x = F.relu(self.linear1(x))
-        x = F.relu(self.linear2(x))
-        x = F.relu(self.linear3(x))
+        for layer in self.features:
+            x = layer['linear_action'](layer['linear'](x))
         
-        mean = 2.0 * torch.tanh(self.mean_linear(x))
-        std = F.softplus(self.std_linear(x))
-        return mean, std
+        mean_ = 2.0 * torch.tanh(self.fc_mu(x))
+        std = F.softplus(self.fc_std(x))
+        return mean_, std
 
-class ValueNet(torch.nn.Module):
-    def __init__(self, state_dim, hidden_dim):
-        super(ValueNet, self).__init__()
-        self.linear1 = torch.nn.Linear(state_dim, hidden_dim)
-        self.linear2 = torch.nn.Linear(hidden_dim, hidden_dim)
-        self.linear3 = torch.nn.Linear(hidden_dim, 1)
+class valueNet(nn.Module):
+    def __init__(self, state_dim, hidden_layers_dim):
+        super(valueNet, self).__init__()
+        self.features = nn.ModuleList()
+        for idx, h in enumerate(hidden_layers_dim):
+            self.features.append(nn.ModuleDict({
+                'linear': nn.Linear(hidden_layers_dim[idx-1] if idx else state_dim, h),
+                'linear_activation': nn.ReLU(inplace=True)
+            }))
         
-        self.head = torch.nn.Linear(hidden_dim , 1)
+        self.head = nn.Linear(hidden_layers_dim[-1] , 1)
         
     def forward(self, x):
-        x = F.relu(self.linear1(x))
-        x = F.relu(self.linear2(x))
-        x = F.relu(self.linear3(x))
+        for layer in self.features:
+            x = layer['linear_activation'](layer['linear'](x))
         return self.head(x)
 
 def compute_advantage(gamma, lmbda, td_delta):
@@ -51,7 +56,7 @@ def compute_advantage(gamma, lmbda, td_delta):
 class PPO:
     def __init__(self,
                 state_dim: int,
-                hidden_dim: int,
+                hidden_layers_dim: typ.List,
                 action_dim: int,
                 actor_lr: float,
                 critic_lr: float,
@@ -59,8 +64,8 @@ class PPO:
                 PPO_kwargs: typ.Dict,
                 device: torch.device
                 ):
-        self.actor = PolicyNet(state_dim, hidden_dim, action_dim).to(device)
-        self.critic = ValueNet(state_dim, hidden_dim).to(device)
+        self.actor = policyNet(state_dim, hidden_layers_dim, action_dim).to(device)
+        self.critic = valueNet(state_dim, hidden_layers_dim).to(device)
         self.actor_opt = torch.optim.Adam(self.actor.parameters(), lr=actor_lr)
         self.critic_opt = torch.optim.Adam(self.critic.parameters(), lr=critic_lr)
         

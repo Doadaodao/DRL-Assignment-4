@@ -11,9 +11,6 @@ from pathlib import Path
 from tensordict import TensorDict # type: ignore
 from torchrl.data import TensorDictReplayBuffer, LazyMemmapStorage # type: ignore
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from dmc import make_dmc_env
-
 class PolicyNet(torch.nn.Module):
     def __init__(self, state_dim, hidden_dim, action_dim, action_bound):
         super(PolicyNet, self).__init__()

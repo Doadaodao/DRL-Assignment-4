@@ -68,13 +68,13 @@ class QValueNet(nn.Module):
         return x1, x2
 
 class GaussianPolicyNet(nn.Module):
-    def __init__(self, num_inputs, num_actions, hidden_dim, action_space=None):
+    def __init__(self, state_dim, action_dim, hidden_dim, action_space=None):
         super(GaussianPolicyNet, self).__init__()
         
-        self.linear1 = torch.nn.Linear(num_inputs, hidden_dim)
+        self.linear1 = torch.nn.Linear(state_dim, hidden_dim)
         self.linear2 = torch.nn.Linear(hidden_dim, hidden_dim)
-        self.mean_linear = torch.nn.Linear(hidden_dim, num_actions)
-        self.log_std_linear = torch.nn.Linear(hidden_dim, num_actions)
+        self.mean_linear = torch.nn.Linear(hidden_dim, action_dim)
+        self.log_std_linear = torch.nn.Linear(hidden_dim, action_dim)
         self.apply(weights_init_)
 
         self.action_scale = torch.FloatTensor((action_space.high - action_space.low) / 2.)
