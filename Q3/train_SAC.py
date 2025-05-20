@@ -1,13 +1,13 @@
 import datetime
 import numpy as np
 import torch
-from sac import SAC, ReplayBuffer
+from SAC_agent import SAC
 from logger import MetricLogger
 from pathlib import Path
 
 import os
 import sys
-import random
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dmc import make_dmc_env
 
@@ -20,6 +20,9 @@ def make_env():
 def main():
     env = make_env()
 
+    save_dir = Path("checkpoints") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+    save_dir.mkdir(parents=True)
+
     agent = SAC(num_inputs = env.observation_space.shape[0], 
                             action_space=env.action_space,
                             gamma=0.99,
@@ -29,64 +32,45 @@ def main():
                             automatic_entropy_tuning=True, 
                             device="cuda" if torch.cuda.is_available() else "cpu",
                             hidden_size=256,
-                            lr=0.0003)
-
-    buffer_size = 1000000
-    batch_size = 256
-    memory = ReplayBuffer(buffer_size)
-
-    save_dir = Path("checkpoints") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-    save_dir.mkdir(parents=True)
+                            lr=0.0003,
+                            buffer_size = 1000000, 
+                            batch_size = 256, 
+                            save_dir = save_dir, 
+                            save_interval = 5e3)
 
     logger = MetricLogger(save_dir)
 
-    # Training Loop
-    updates = 0
-
     episodes = 400000
-    total_numsteps = 0
 
     for e in range(episodes):
-        
+
         state, _ = env.reset()
-        done = False
+        terminated = False
+        truncated = False
 
-        episode_steps = 0
-        
-        episode_reward = 0
+        while not (terminated or truncated):
+            # Run agent on the state
+            action = agent.act(state)
 
-        while not done:
-            action = agent.select_action(state)  # Sample action from policy
-
-            critic_1_loss, policy_loss = 0, 0
-            
-            if len(memory) > batch_size:
-                critic_1_loss, critic_2_loss, policy_loss, ent_loss, alpha = agent.update_parameters(memory, batch_size, updates)
-                updates += 1
-
+            # Agent performs action
             next_state, reward, terminated, truncated, info = env.step(action)
-            done = terminated or truncated
-            episode_steps += 1
-            total_numsteps += 1
-            episode_reward += reward
+
+            # Remember
+            agent.cache(state, next_state, action, reward, terminated, truncated)
+
+            # Learn
+            q, policy_loss, _ = agent.update()
 
             # Logging
-            logger.log_step(reward, critic_1_loss, policy_loss)
+            logger.log_step(reward, policy_loss, q)
 
-            mask = 1 if terminated or truncated else float(not done)
-
-            memory.push(state, action, reward, next_state, mask) # Append transition to memory
-
+            # Update state
             state = next_state
 
         logger.log_episode()
         
-        if ((e + 1) % 20 == 0):
-            logger.record(episode=e, step=e*1000)
-            agent.save_checkpoint("humanoid-walk", e)
-
-        print("Episode: {}, total numsteps: {}, episode steps: {}, reward: {}".format(e, total_numsteps, episode_steps, round(episode_reward, 2)))
-
+        if (e % 20 == 0) or (e == episodes - 1):
+            logger.record(episode=e, step=agent.curr_step)
 
     env.close()
 

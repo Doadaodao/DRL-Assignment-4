@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from SAC import SAC
+from Q3.SAC_agent import SAC
 
 import os
 import sys
@@ -19,18 +19,22 @@ class Agent(object):
             return env
         env = make_env()
         
-        self.agent = SAC(num_inputs = env.observation_space.shape[0], 
-                         action_space=env.action_space,
-                         gamma=0.99,
-                         tau=0.005, 
-                         alpha=0.2, 
-                         target_update_interval=1, 
-                         automatic_entropy_tuning=True, 
-                         device="cuda" if torch.cuda.is_available() else "cpu",
-                         hidden_size=256,
-                         lr=0.0003)
+        agent = SAC(num_inputs = env.observation_space.shape[0], 
+                            action_space=env.action_space,
+                            gamma=0.99,
+                            tau=0.005, 
+                            alpha=0.2, 
+                            target_update_interval=1, 
+                            automatic_entropy_tuning=True, 
+                            device="cuda" if torch.cuda.is_available() else "cpu",
+                            hidden_size=256,
+                            lr=0.0003,
+                            buffer_size = 1000000, 
+                            batch_size = 256, 
+                            save_dir = None, 
+                            save_interval = 5e3)
 
-        self.agent.load_checkpoint("./sac_checkpoint")
+        self.agent.load_checkpoint("./sac_walk_1759.ckpth")
 
     def act(self, observation):
         return self.agent.select_action(observation, evaluate=False)

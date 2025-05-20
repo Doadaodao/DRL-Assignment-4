@@ -1,17 +1,9 @@
-import gymnasium as gym
 import numpy as np
-from tqdm import tqdm
 import torch
-import torch.nn.functional as F
 import sys
 import os
 import datetime
-import random
-from collections import deque
 from pathlib import Path
-from tensordict import TensorDict
-from torchrl.data import TensorDictReplayBuffer, LazyMemmapStorage
-
 from DDPG import DDPG
 from logger import MetricLogger
 
@@ -49,7 +41,6 @@ def main():
                  save_dir = save_dir, 
                  save_interval = 5e3)
 
-    
     logger = MetricLogger(save_dir)
 
     episodes = 400000
