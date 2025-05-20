@@ -63,7 +63,7 @@ class Agent(object):
         
         self.agent = SAC(env.observation_space.shape[0], env.action_space, args)
         
-        self.agent.load_model("./checkpoints/sac_checkpoint_humanoid-walk_999")
+        self.agent.load_checkpoint("./checkpoints/sac_checkpoint_humanoid-walk_999")
 
     def act(self, observation):
-        return self.agent.select_action(observation, evaluate=True)
+        return self.agent.select_action(observation, evaluate=False)
