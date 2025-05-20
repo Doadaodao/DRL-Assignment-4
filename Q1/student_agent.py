@@ -1,7 +1,7 @@
 import gymnasium as gym
 import numpy as np
 import torch   
-from PPO import PPO, Config
+from PPO import PPO
 
 # Do not modify the input of the 'act' function and the '__init__' function. 
 class Agent(object):
@@ -10,17 +10,17 @@ class Agent(object):
         # Pendulum-v1 has a Box action space with shape (1,)
         # Actions are in the range [-2.0, 2.0]
         self.action_space = gym.spaces.Box(-2.0, 2.0, (1,), np.float32)
-        self.env = gym.make('Pendulum-v1')
-        self.cfg = Config(self.env)
+        env = gym.make('Pendulum-v1')
+        
         self.agent = PPO(
-            state_dim=self.cfg.state_dim,
-            hidden_layers_dim=self.cfg.hidden_layers_dim,
-            action_dim=self.cfg.action_dim,
-            actor_lr=self.cfg.actor_lr,
-            critic_lr=self.cfg.critic_lr,
-            gamma=self.cfg.gamma,
-            PPO_kwargs=self.cfg.PPO_kwargs,
-            device=self.cfg.device
+            state_dim=env.observation_space.shape[0],
+            hidden_layers_dim=[64, 64, 64],
+            action_dim=env.action_space.shape[0],
+            actor_lr=1e-4,
+            critic_lr=5e-3,
+            gamma=0.9,
+            PPO_kwargs={'lmbda': 0.9, 'eps': 0.2, 'ppo_epochs': 10},
+            device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         )
         self.agent.actor.load_state_dict(torch.load(self.cfg.save_path))
 
