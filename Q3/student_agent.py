@@ -33,7 +33,7 @@ class Agent(object):
                 save_dir = None, 
                 save_interval = 5e3)
 
-        self.agent.load_checkpoint("./sac_walk_1759.ckpth")
+        self.agent.load_model("./sac_walk_1759.ckpth")
 
     def act(self, observation):
         return self.agent.select_action(observation, evaluate=False)
