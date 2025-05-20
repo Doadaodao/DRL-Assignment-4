@@ -23,20 +23,19 @@ def main():
     save_dir = Path("checkpoints") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     save_dir.mkdir(parents=True)
 
-    agent = SAC(num_inputs = env.observation_space.shape[0], 
-                            action_space=env.action_space,
-                            gamma=0.99,
-                            tau=0.005, 
-                            alpha=0.2, 
-                            target_update_interval=1, 
-                            automatic_entropy_tuning=True, 
-                            device="cuda" if torch.cuda.is_available() else "cpu",
-                            hidden_size=256,
-                            lr=0.0003,
-                            buffer_size = 1000000, 
-                            batch_size = 256, 
-                            save_dir = save_dir, 
-                            save_interval = 5e3)
+    agent = SAC(state_dim = env.observation_space.shape[0], 
+                action_space=env.action_space,
+                gamma=0.99,
+                tau=0.005, 
+                alpha=0.2, 
+                automatic_entropy_tuning=True, 
+                device="cuda" if torch.cuda.is_available() else "cpu",
+                hidden_dim=256,
+                lr=0.0003,
+                buffer_size = 1000000, 
+                batch_size = 256, 
+                save_dir = save_dir, 
+                save_interval = 5e3)
 
     logger = MetricLogger(save_dir)
 

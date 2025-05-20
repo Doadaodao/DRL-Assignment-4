@@ -111,7 +111,7 @@ class GaussianPolicyNet(nn.Module):
 class SAC(object):
     def __init__(self, state_dim, action_space, gamma, tau, alpha, 
                  automatic_entropy_tuning, device,
-                 hidden_dim, lr, buffer_size, minimal_size, batch_size, save_dir, save_interval):
+                 hidden_dim, lr, buffer_size, batch_size, save_dir, save_interval):
         self.device = device
 
         self.critic = QValueNet(state_dim, action_space.shape[0], hidden_dim).to(device=self.device)
