@@ -1,7 +1,6 @@
 import gymnasium as gym
-import numpy as np
 import torch   
-from PPO import PPO, Config
+from PPO import PPO
 
 # Do not modify the input of the 'act' function and the '__init__' function. 
 class Agent(object):
@@ -9,7 +8,7 @@ class Agent(object):
     def __init__(self):
         env = gym.make('Pendulum-v1')
         
-        agent = PPO(
+        self.agent = PPO(
             state_dim=env.observation_space.shape[0],
             hidden_layers_dim=[64, 64, 64],
             action_dim=env.action_space.shape[0],
