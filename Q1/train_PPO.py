@@ -6,7 +6,7 @@ from tqdm import tqdm
 from PPO import PPO, replayBuffer
 
 
-def main(env, cfg):
+def main():
     env = gym.make('Pendulum-v1')
 
     # save_dir = Path("checkpoints") / datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")

@@ -9,7 +9,7 @@ from dmc import make_dmc_env
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="DRL HW4 Q3")
-    parser.add_argument("--episodes", default=100, type=int, help="Number of episodes to evaluate")
+    parser.add_argument("--episodes", default=10, type=int, help="Number of episodes to evaluate")
     parser.add_argument("--record_demo", action="store_true", help="Record a demonstration")
     return parser.parse_args()
 

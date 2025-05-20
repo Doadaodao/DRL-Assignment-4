@@ -73,7 +73,7 @@ np.random.seed(args.seed)
 
 # Agent
 agent = SAC(env.observation_space.shape[0], env.action_space, args)
-agent.load_checkpoint("./checkpoints/sac_checkpoint_humanoid-walk_999")
+# agent.load_checkpoint("./checkpoints/sac_checkpoint_humanoid-walk_999")
 
 #Tesnorboard
 writer = SummaryWriter('runs/{}_SAC_{}_{}_{}'.format(datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"), args.env_name,

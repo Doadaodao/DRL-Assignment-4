@@ -118,12 +118,12 @@ class SAC(object):
         if not os.path.exists('checkpoints/'):
             os.makedirs('checkpoints/')
         if ckpt_path is None:
-            ckpt_path = "checkpoints/sac_checkpoint_{}_{}".format(env_name, suffix)
+            ckpt_path = "checkpoints/sac_start_checkpoint_{}_{}".format(env_name, suffix)
         print('Saving models to {}'.format(ckpt_path))
+        print('Alpha: {}'.format(self.alpha))
         torch.save({'policy_state_dict': self.policy.state_dict(),
                     'critic_state_dict': self.critic.state_dict(),
                     'critic_target_state_dict': self.critic_target.state_dict(),
-                    'alpha_state_dict': self.log_alpha.state_dict() if self.automatic_entropy_tuning else None,
                     'critic_optimizer_state_dict': self.critic_optim.state_dict(),
                     'policy_optimizer_state_dict': self.policy_optim.state_dict()}, 
                     ckpt_path)
